@@ -25,7 +25,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
     // Ladders
     private readonly int[] _nodeLadderId;
     private readonly int[] _nodeLadderPosition;
-    private readonly int[] _longPathChild;
     private readonly List<int[]> _ladders = [];
 
     // Jump pointers (only on jump nodes)
@@ -69,7 +68,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
         _subtreeSize = new int[nodeCount];
         _nodeLadderId = new int[nodeCount];
         _nodeLadderPosition = new int[nodeCount];
-        _longPathChild = new int[nodeCount];
         _jumpPointers = new int[nodeCount][];
         _isJumpNode = new bool[nodeCount];
         _jumpDescendant = new int[nodeCount];
@@ -174,15 +172,13 @@ public class LevelAncestorOptimal : ILAAlgorithm
         return ladder[position - remainingDistance];
     }
 
-    // =====================================================================
     // Preprocessing steps
-    // =====================================================================
 
     private void ComputeDepthHeightSize(int root)
     {
         var stack = new Stack<(int node, bool processed)>();
-        stack.Push((root, false));
         _depth[root] = 0;
+        stack.Push((root, false));
 
         while (stack.Count > 0)
         {
@@ -261,14 +257,15 @@ public class LevelAncestorOptimal : ILAAlgorithm
     private void BuildLadders()
     {
         // Pick tallest child as long-path continuation
-        Array.Fill(_longPathChild, -1);
+        var longPathChild = new int[_nodeCount];
+        Array.Fill(longPathChild, -1);
         for (var node = 0; node < _nodeCount; node++)
         {
             foreach (var child in _children[node])
             {
-                if (_longPathChild[node] == -1 || _height[child] > _height[_longPathChild[node]])
+                if (longPathChild[node] == -1 || _height[child] > _height[longPathChild[node]])
                 {
-                    _longPathChild[node] = child;
+                    longPathChild[node] = child;
                 }
             }
         }
@@ -276,13 +273,13 @@ public class LevelAncestorOptimal : ILAAlgorithm
         // Extract long paths
         for (var node = 0; node < _nodeCount; node++)
         {
-            if (_parent[node] != -1 && _longPathChild[_parent[node]] == node)
+            if (_parent[node] != -1 && longPathChild[_parent[node]] == node)
             {
                 continue; // not a path head
             }
 
             var path = new List<int>();
-            for (var current = node; current != -1; current = _longPathChild[current])
+            for (var current = node; current != -1; current = longPathChild[current])
             {
                 _nodeLadderId[current] = _ladders.Count;
                 _nodeLadderPosition[current] = path.Count;
@@ -450,9 +447,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
         }
     }
 
-    // =====================================================================
     // Helpers
-    // =====================================================================
 
     private void BuildMicroTable(long encoding, List<int> nodesInOrder)
     {
@@ -525,9 +520,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
         return node;
     }
 
-    // =====================================================================
     // Test
-    // =====================================================================
 
     public static void Test()
     {

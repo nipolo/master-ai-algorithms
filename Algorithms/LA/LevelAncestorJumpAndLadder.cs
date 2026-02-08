@@ -5,7 +5,7 @@ using Algorithms.Common.Types;
 
 namespace Algorithms.LA;
 
-public class LevelAncestorCombined : ILAAlgorithm
+public class LevelAncestorJumpAndLadder : ILAAlgorithm
 {
     private readonly int _n;
     private readonly int _logN;
@@ -18,12 +18,11 @@ public class LevelAncestorCombined : ILAAlgorithm
     private readonly int[][] _jump;
 
     // Ladders
-    private readonly int[] _nodeLadderId;
-    private readonly int[] _ladderIndex;
+    private readonly int[] _nodeLadderId; // which ladder a node belongs to
+    private readonly int[] _ladderIndex; // index of node within its ladder
     private readonly List<List<int>> _allLadders = [];
-    private readonly int[] _longPathChild;
 
-    public LevelAncestorCombined(int[] parent) : this(parent.Length)
+    public LevelAncestorJumpAndLadder(int[] parent) : this(parent.Length)
     {
         for (var i = 1; i < parent.Length; i++)
         {
@@ -36,7 +35,7 @@ public class LevelAncestorCombined : ILAAlgorithm
         Preprocess(0);
     }
 
-    public LevelAncestorCombined(int n)
+    public LevelAncestorJumpAndLadder(int n)
     {
         _n = n;
         _logN = (int)Math.Ceiling(Math.Log2(n + 1)) + 1;
@@ -47,7 +46,6 @@ public class LevelAncestorCombined : ILAAlgorithm
         _jump = new int[n][];
         _nodeLadderId = new int[n];
         _ladderIndex = new int[n];
-        _longPathChild = new int[n];
 
         for (var i = 0; i < n; i++)
         {
@@ -140,22 +138,25 @@ public class LevelAncestorCombined : ILAAlgorithm
 
     private void LongPathDecomposition()
     {
-        Array.Fill(_longPathChild, -1);
+        // For each node, pick the child with maximum height as the
+        // "long path child". This greedily forms the long-path decomposition.
+        var longPathChild = new int[_n];
+        Array.Fill(longPathChild, -1);
 
         for (var v = 0; v < _n; v++)
         {
             foreach (var child in _children[v])
             {
-                if (_longPathChild[v] == -1 || _height[child] > _height[_longPathChild[v]])
+                if (longPathChild[v] == -1 || _height[child] > _height[longPathChild[v]])
                 {
-                    _longPathChild[v] = child;
+                    longPathChild[v] = child;
                 }
             }
         }
 
         for (var v = 0; v < _n; v++)
         {
-            if (_parent[v] != -1 && _longPathChild[_parent[v]] == v)
+            if (_parent[v] != -1 && longPathChild[_parent[v]] == v)
             {
                 continue;
             }
@@ -167,7 +168,7 @@ public class LevelAncestorCombined : ILAAlgorithm
                 _nodeLadderId[cur] = _allLadders.Count;
                 _ladderIndex[cur] = path.Count;
                 path.Add(cur);
-                cur = _longPathChild[cur];
+                cur = longPathChild[cur];
             }
             _allLadders.Add(path);
         }
@@ -239,7 +240,7 @@ public class LevelAncestorCombined : ILAAlgorithm
         //    0:A - 1:B - 2:C - 3:D - 4:E - 5:F - 6:G - 7:H
         //                  \
         //                   8:X
-        var la = new LevelAncestorCombined(9);
+        var la = new LevelAncestorJumpAndLadder(9);
         la.AddEdge(0, 1);
         la.AddEdge(1, 2);
         la.AddEdge(2, 3);

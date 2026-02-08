@@ -15,7 +15,7 @@ public class LevelAncestorTests
         //_laFactory = (parents) => new LevelAncestorTable(parents);
         //_laFactory = (parents) => new LevelAncestorLadder(parents);
         //_laFactory = (parents) => new LevelAncestorLadder(parents);
-        //_laFactory = (parents) => new LevelAncestorCombined(parents);
+        //_laFactory = (parents) => new LevelAncestorJumpAndLadder(parents);
         _laFactory = (parents) => new LevelAncestorOptimal(parents);
     }
 
