@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Algorithms/Algorithms.csproj" />
+  <Project Path="LevelAncestorProblem.CLI/LevelAncestorProblem.CLI.csproj" />
+  <Project Path="Algorithms.Tests/Algorithms.Tests.csproj" />
+</Solution>
