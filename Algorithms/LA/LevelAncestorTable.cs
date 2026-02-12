@@ -17,8 +17,6 @@ public class LevelAncestorTable : ILAAlgorithm
     private readonly List<int>[] _children;
     private readonly int[] _depth;
     private readonly int[][] _table; // table[v][d] = ancestor of v at depth d
-    private readonly int[] _dfsNumber; // DFS numbering for each node
-    private readonly int[] _dfsToNode; // Reverse mapping from DFS number to node
 
     public LevelAncestorTable(int[] parent) : this(parent.Length)
     {
@@ -53,8 +51,6 @@ public class LevelAncestorTable : ILAAlgorithm
         _children = new List<int>[n];
         _depth = new int[n];
         _table = new int[n][];
-        _dfsNumber = new int[n];
-        _dfsToNode = new int[n];
 
         for (var i = 0; i < n; i++)
         {
@@ -100,69 +96,25 @@ public class LevelAncestorTable : ILAAlgorithm
             }
         }
 
-        // Assign DFS numbers
-        var dfsCounter = 0;
-        AssignDfsNumbers(root, ref dfsCounter);
-
-        // Build the lookup table using dynamic programming
-        // Base case: each node is its own ancestor at its own depth
-        for (var v = 0; v < _n; v++)
-        {
-            _table[v][_depth[v]] = v;
-        }
-
         // Fill the table: for each node v and depth d < depth(v)
         // LA(v, d) = LA(parent(v), d)
+        _table[root][0] = root;
         FillTable(root);
-    }
-
-    private void AssignDfsNumbers(int node, ref int counter)
-    {
-        _dfsNumber[node] = counter;
-        _dfsToNode[counter] = node;
-        counter++;
-
-        foreach (var child in _children[node])
-        {
-            AssignDfsNumbers(child, ref counter);
-        }
     }
 
     private void FillTable(int node)
     {
-        // For the current node, fill all ancestor entries
-        // We can climb up from this node to the root
-        var current = node;
-        var d = _depth[node];
-
-        // Fill all depths from 0 to depth[node]
-        while (d >= 0)
-        {
-            _table[node][d] = current;
-
-            // Move to parent (find parent among all nodes)
-            var parent = -1;
-            for (var p = 0; p < _n; p++)
-            {
-                if (_children[p].Contains(current))
-                {
-                    parent = p;
-                    break;
-                }
-            }
-
-            if (parent == -1)
-            {
-                break; // reached root
-            }
-
-            current = parent;
-            d--;
-        }
-
-        // Recursively fill for all children
         foreach (var child in _children[node])
         {
+            // Copy ancestors from parent: _table[child][d] = _table[node][d]
+            for (var d = 0; d <= _depth[node]; d++)
+            {
+                _table[child][d] = _table[node][d];
+            }
+
+            // Set the child itself at its own depth
+            _table[child][_depth[child]] = child;
+
             FillTable(child);
         }
     }
