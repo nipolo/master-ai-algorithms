@@ -106,8 +106,8 @@ public class LevelAncestorOptimal : ILAAlgorithm
         // Case 1: node is in a microtree
         if (_isMicroNode[node])
         {
-            var root = _microTreeRoot[node];
-            var rootDepth = _depth[root];
+            var microTreeRoot = _microTreeRoot[node];
+            var rootDepth = _depth[microTreeRoot];
 
             if (targetDepth >= rootDepth)
             {
@@ -115,13 +115,13 @@ public class LevelAncestorOptimal : ILAAlgorithm
                 var localTargetDepth = targetDepth - rootDepth;
                 var encoding = _microTreeEncoding[node];
                 var answerLocalIndexInMicroTree = _microTables[encoding][_microDfsIndex[node], localTargetDepth];
-                var microTreeId = _microTreeIdByRoot[root];
+                var microTreeId = _microTreeIdByRoot[microTreeRoot];
 
                 return _microDfsToNodeMap[microTreeId][answerLocalIndexInMicroTree];
             }
 
             // Answer is outside — jump to microtree root's parent (a macro node)
-            node = _parent[root];
+            node = _parent[microTreeRoot];
             if (node == -1)
             {
                 return -1;
@@ -160,8 +160,8 @@ public class LevelAncestorOptimal : ILAAlgorithm
     private void Build(int root)
     {
         ComputeDepthHeightSize(root);
-        ClassifyMicroMacro(root);
         BuildLadders();
+        ClassifyMicroMacro(root);
         IdentifyJumpNodes();
         BuildJumpPointers();
         FindJumpDescendants(root);
@@ -197,31 +197,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
                     _depth[child] = _depth[node] + 1;
                     stack.Push((child, false));
                 }
-            }
-        }
-    }
-
-    private void ClassifyMicroMacro(int root)
-    {
-        for (var node = 0; node < _nodeCount; node++)
-        {
-            _isMicroNode[node] = _subtreeSize[node] <= _microTreeMaxSize;
-        }
-
-        var queue = new Queue<int>();
-        queue.Enqueue(root);
-
-        while (queue.Count > 0)
-        {
-            var node = queue.Dequeue();
-            foreach (var child in _children[node])
-            {
-                if (_isMicroNode[child])
-                {
-                    _microTreeRoot[child] = _isMicroNode[node] ? _microTreeRoot[node] : child;
-                }
-
-                queue.Enqueue(child);
             }
         }
     }
@@ -279,6 +254,31 @@ public class LevelAncestorOptimal : ILAAlgorithm
 
             extension.AddRange(path);
             _ladders.Add([.. extension]); // The same as add at index _ladders.Count
+        }
+    }
+
+    private void ClassifyMicroMacro(int root)
+    {
+        for (var node = 0; node < _nodeCount; node++)
+        {
+            _isMicroNode[node] = _subtreeSize[node] <= _microTreeMaxSize;
+        }
+
+        var queue = new Queue<int>();
+        queue.Enqueue(root);
+
+        while (queue.Count > 0)
+        {
+            var node = queue.Dequeue();
+            foreach (var child in _children[node])
+            {
+                if (_isMicroNode[child])
+                {
+                    _microTreeRoot[child] = _isMicroNode[node] ? _microTreeRoot[node] : child;
+                }
+
+                queue.Enqueue(child);
+            }
         }
     }
 
@@ -353,6 +353,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
                     if (_jumpDescendant[child] != -1)
                     {
                         _jumpDescendant[node] = _jumpDescendant[child];
+
                         break;
                     }
                 }
@@ -360,6 +361,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
             else
             {
                 stack.Push((node, true));
+
                 foreach (var child in _children[node])
                 {
                     stack.Push((child, false));
@@ -397,7 +399,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
                 {
                     if (current != treeRoot)
                     {
-                        encoding |= 1L << bitPosition;
+                        encoding |= 1L << bitPosition;  // up edge, bit = 1
                         bitPosition++;
                     }
                 }
