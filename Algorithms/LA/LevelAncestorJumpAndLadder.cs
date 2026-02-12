@@ -60,7 +60,38 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
 
     public ComplexityEnum QueryComplexity => ComplexityEnum.Constant;
 
-    public void AddEdge(int parent, int child)
+    /// <summary>
+    /// Query: O(1) — one jump pointer + one ladder lookup
+    /// </summary>
+    public int Query(int u, int d)
+    {
+        if (d < 0 || d > _depth[u])
+        {
+            return -1;
+        }
+
+        if (d == _depth[u])
+        {
+            return u;
+        }
+
+        var delta = _depth[u] - d;
+
+        // Step 1: Follow one jump pointer to get at least halfway
+        var jumpBits = (int)Math.Floor(Math.Log2(delta));
+        var v = _jump[u][jumpBits];
+
+        // Step 2: Look up the answer in v's ladder
+        var ladderId = _nodeLadderId[v];
+        var ladder = _allLadders[ladderId];
+        var posInLadder = _ladderIndex[v];
+        var remainingUp = _depth[v] - d;
+        var targetPos = posInLadder - remainingUp;
+
+        return ladder[targetPos];
+    }
+
+    private void AddEdge(int parent, int child)
     {
         _children[parent].Add(child);
         _parent[child] = parent;
@@ -71,7 +102,7 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
     /// - O(n) for depths, heights, ladders
     /// - O(n log n) for jump pointers
     /// </summary>
-    public void Preprocess(int root)
+    private void Preprocess(int root)
     {
         ComputeDepthAndHeight(root);
         BuildJumpPointers(root);
@@ -88,6 +119,7 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
         while (stack.Count > 0)
         {
             var (node, processed) = stack.Pop();
+
             if (processed)
             {
                 _height[node] = 1;
@@ -141,36 +173,44 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
         // For each node, pick the child with maximum height as the
         // "long path child". This greedily forms the long-path decomposition.
         var longPathChild = new int[_n];
-        Array.Fill(longPathChild, -1);
 
         for (var v = 0; v < _n; v++)
         {
+            var bestChild = -1;
+            var bestHeight = 0;
             foreach (var child in _children[v])
             {
-                if (longPathChild[v] == -1 || _height[child] > _height[longPathChild[v]])
+                if (_height[child] > bestHeight)
                 {
-                    longPathChild[v] = child;
+                    bestHeight = _height[child];
+                    bestChild = child;
                 }
             }
+            longPathChild[v] = bestChild;
         }
 
         for (var v = 0; v < _n; v++)
         {
-            if (_parent[v] != -1 && longPathChild[_parent[v]] == v)
-            {
-                continue;
-            }
+            // v is a path head if its parent's longPathChild is not v
+            var isHead = (_parent[v] == -1) || (longPathChild[_parent[v]] != v);
 
-            var path = new List<int>();
-            var cur = v;
-            while (cur != -1)
+            if (isHead)
             {
-                _nodeLadderId[cur] = _allLadders.Count;
-                _ladderIndex[cur] = path.Count;
-                path.Add(cur);
-                cur = longPathChild[cur];
+                // Walk down the long path from v
+                var path = new List<int>();
+                var cur = v;
+                while (cur != -1)
+                {
+                    path.Add(cur);
+
+                    var ladderId = _allLadders.Count;
+                    _nodeLadderId[cur] = ladderId;
+                    _ladderIndex[cur] = path.Count - 1;
+
+                    cur = longPathChild[cur];
+                }
+                _allLadders.Add(path);
             }
-            _allLadders.Add(path);
         }
     }
 
@@ -179,11 +219,11 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
         for (var i = 0; i < _allLadders.Count; i++)
         {
             var path = _allLadders[i];
-            var h = path.Count;
 
             var extension = new List<int>();
             var cur = _parent[path[0]];
-            for (var step = 0; step < h && cur != -1; step++)
+
+            for (var step = 0; step < path.Count && cur != -1; step++)
             {
                 extension.Add(cur);
                 cur = _parent[cur];
@@ -201,37 +241,6 @@ public class LevelAncestorJumpAndLadder : ILAAlgorithm
             extension.AddRange(path);
             _allLadders[i] = extension;
         }
-    }
-
-    /// <summary>
-    /// Query: O(1) — one jump pointer + one ladder lookup
-    /// </summary>
-    public int Query(int u, int d)
-    {
-        if (d < 0 || d > _depth[u])
-        {
-            return -1;
-        }
-
-        if (d == _depth[u])
-        {
-            return u;
-        }
-
-        var delta = _depth[u] - d;
-
-        // Step 1: Follow one jump pointer to get at least halfway
-        var jumpBits = (int)Math.Floor(Math.Log2(delta));
-        var v = _jump[u][jumpBits];
-
-        // Step 2: Look up the answer in v's ladder
-        var ladderId = _nodeLadderId[v];
-        var ladder = _allLadders[ladderId];
-        var posInLadder = _ladderIndex[v];
-        var remainingUp = _depth[v] - d;
-        var targetPos = posInLadder - remainingUp;
-
-        return ladder[targetPos];
     }
 
     // --- Demo ---

@@ -46,51 +46,6 @@ public class LevelAncestorJumpPointers : ILAAlgorithm
 
     public ComplexityEnum QueryComplexity => ComplexityEnum.Linear;
 
-    public void AddEdge(int parent, int child)
-    {
-        _children[parent].Add(child);
-    }
-
-    /// <summary>
-    /// Preprocess the tree rooted at 'root'. O(n log n)
-    /// </summary>
-    public void Preprocess(int root)
-    {
-        // BFS to set depths and direct parent (jump[v][0])
-        var queue = new Queue<int>();
-        var visited = new bool[_n];
-
-        _depth[root] = 0;
-        _jump[root][0] = -1; // root has no parent
-        visited[root] = true;
-        queue.Enqueue(root);
-
-        while (queue.Count > 0)
-        {
-            var u = queue.Dequeue();
-            foreach (var child in _children[u])
-            {
-                if (!visited[child])
-                {
-                    visited[child] = true;
-                    _depth[child] = _depth[u] + 1;
-                    _jump[child][0] = u; // parent
-                    queue.Enqueue(child);
-                }
-            }
-        }
-
-        // Fill jump table: jump[v][i] = jump[jump[v][i-1]][i-1]
-        for (var i = 1; i < _logN; i++)
-        {
-            for (var v = 0; v < _n; v++)
-            {
-                var halfway = _jump[v][i - 1];
-                _jump[v][i] = (halfway == -1) ? -1 : _jump[halfway][i - 1];
-            }
-        }
-    }
-
     /// <summary>
     /// Returns the ancestor of u at depth d. O(log n)
     /// </summary>
@@ -119,6 +74,45 @@ public class LevelAncestorJumpPointers : ILAAlgorithm
         }
 
         return u;
+    }
+
+    private void AddEdge(int parent, int child)
+    {
+        _children[parent].Add(child);
+    }
+
+    /// <summary>
+    /// Preprocess the tree rooted at 'root'. O(n log n)
+    /// </summary>
+    private void Preprocess(int root)
+    {
+        // BFS to set depths and direct parent (jump[v][0])
+        var queue = new Queue<int>();
+
+        _depth[root] = 0;
+        _jump[root][0] = -1; // root has no parent
+        queue.Enqueue(root);
+
+        while (queue.Count > 0)
+        {
+            var u = queue.Dequeue();
+            foreach (var child in _children[u])
+            {
+                _depth[child] = _depth[u] + 1;
+                _jump[child][0] = u; // parent
+                queue.Enqueue(child);
+            }
+        }
+
+        // Fill jump table: jump[v][i] = jump[jump[v][i-1]][i-1]
+        for (var i = 1; i < _logN; i++)
+        {
+            for (var v = 0; v < _n; v++)
+            {
+                var halfway = _jump[v][i - 1];
+                _jump[v][i] = (halfway == -1) ? -1 : _jump[halfway][i - 1];
+            }
+        }
     }
 
     // --- Demo ---

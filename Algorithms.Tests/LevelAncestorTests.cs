@@ -29,8 +29,8 @@ public class LevelAncestorTests
         //       3   4   5
         //      /
         //     6
-        int[] parent = [-1, 0, 0, 1, 1, 2, 3];
-        var la = _laFactory(parent);
+        int[] parents = [-1, 0, 0, 1, 1, 2, 3];
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(6, 0)); // Root at depth 0
         Assert.Equal(1, la.Query(6, 1)); // Ancestor at depth 1
@@ -42,8 +42,8 @@ public class LevelAncestorTests
     [Fact]
     public void SingleNode_LA_Works()
     {
-        int[] parent = [-1];
-        var la = _laFactory(parent);
+        int[] parents = [-1];
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(0, 0));
         Assert.Equal(-1, la.Query(0, 1));
@@ -53,8 +53,8 @@ public class LevelAncestorTests
     public void LinearTree_LA_Works()
     {
         // 0 -> 1 -> 2 -> 3 -> 4 -> 5
-        int[] parent = [-1, 0, 1, 2, 3, 4];
-        var la = _laFactory(parent);
+        int[] parents = [-1, 0, 1, 2, 3, 4];
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(5, 0));
         Assert.Equal(1, la.Query(5, 1));
@@ -72,8 +72,8 @@ public class LevelAncestorTests
         //     1   2
         //    / \ / \
         //   3  4 5  6
-        int[] parent = [-1, 0, 0, 1, 1, 2, 2];
-        var la = _laFactory(parent);
+        int[] parents = [-1, 0, 0, 1, 1, 2, 2];
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(6, 0));
         Assert.Equal(2, la.Query(6, 1));
@@ -87,8 +87,9 @@ public class LevelAncestorTests
     [Fact]
     public void InvalidDepth_ReturnsMinusOne()
     {
-        int[] parent = [-1, 0, 1, 2];
-        var la = _laFactory(parent);
+        // 0 -> 1 -> 2 -> 3
+        int[] parents = [-1, 0, 1, 2];
+        var la = _laFactory(parents);
 
         Assert.Equal(-1, la.Query(3, 10)); // Too deep
         Assert.Equal(-1, la.Query(3, -1)); // Negative
@@ -104,15 +105,15 @@ public class LevelAncestorTests
 
         // Test O(n) preprocessing
         var n = 10000;
-        var parent = new int[n];
-        parent[0] = -1;
+        var parents = new int[n];
+        parents[0] = -1;
         for (var i = 1; i < n; i++)
         {
-            parent[i] = i - 1;
+            parents[i] = i - 1;
         }
 
         var sw = Stopwatch.StartNew();
-        var la = _laFactory(parent);
+        var la = _laFactory(parents);
         sw.Stop();
 
         // Preprocessing should be fast (wall-clock timing is environment-dependent)
@@ -134,13 +135,13 @@ public class LevelAncestorTests
 
         // Test O(1) query time
         var n = 10000;
-        var parent = new int[n];
-        parent[0] = -1;
+        var parents = new int[n];
+        parents[0] = -1;
         for (var i = 1; i < n; i++)
         {
-            parent[i] = i - 1;
+            parents[i] = i - 1;
         }
-        var la = _laFactory(parent);
+        var la = _laFactory(parents);
 
         var sw = Stopwatch.StartNew();
         var iterations = 10000;
@@ -161,13 +162,13 @@ public class LevelAncestorTests
     {
         // Binary tree with 127 nodes (height 6)
         var n = 127;
-        var parent = new int[n];
-        parent[0] = -1;
+        var parents = new int[n];
+        parents[0] = -1;
         for (var i = 1; i < n; i++)
         {
-            parent[i] = (i - 1) / 2;
+            parents[i] = (i - 1) / 2;
         }
-        var la = _laFactory(parent);
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(126, 0));
         Assert.Equal(62, la.Query(126, 5));
@@ -177,9 +178,9 @@ public class LevelAncestorTests
     [Fact]
     public void WideTree_LA_Works()
     {
-        // Root with 10 children
-        int[] parent = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        var la = _laFactory(parent);
+        // Root with 9 children
+        int[] parents = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        var la = _laFactory(parents);
 
         for (var i = 1; i < 10; i++)
         {
@@ -192,8 +193,8 @@ public class LevelAncestorTests
     public void SkewedTree_LA_Works()
     {
         // Right-skewed: 0 -> 1 -> 2 -> 3
-        int[] parent = [-1, 0, 1, 2];
-        var la = _laFactory(parent);
+        int[] parents = [-1, 0, 1, 2];
+        var la = _laFactory(parents);
 
         Assert.Equal(0, la.Query(3, 0));
         Assert.Equal(1, la.Query(3, 1));
@@ -205,22 +206,22 @@ public class LevelAncestorTests
     public void StressTest_RandomQueries()
     {
         var n = 1000;
-        var parent = new int[n];
-        parent[0] = -1;
+        var parents = new int[n];
+        parents[0] = -1;
 
         var rnd = new Random(42);
         for (var i = 1; i < n; i++)
         {
-            parent[i] = rnd.Next(0, i);
+            parents[i] = rnd.Next(0, i);
         }
 
-        var la = _laFactory(parent);
+        var la = _laFactory(parents);
 
         // Perform random LA queries
         for (var i = 0; i < 1000; i++)
         {
             var node = rnd.Next(0, n);
-            var nodeDepth = GetDepth(parent, node);
+            var nodeDepth = GetDepth(parents, node);
 
             if (nodeDepth > 0)
             {
@@ -228,7 +229,7 @@ public class LevelAncestorTests
                 var ancestor = la.Query(node, targetDepth);
 
                 Assert.True(ancestor >= 0 && ancestor < n);
-                Assert.Equal(targetDepth, GetDepth(parent, ancestor));
+                Assert.Equal(targetDepth, GetDepth(parents, ancestor));
             }
         }
     }
@@ -243,15 +244,15 @@ public class LevelAncestorTests
 
         // Test with 100k nodes
         var n = 100000;
-        var parent = new int[n];
-        parent[0] = -1;
+        var parents = new int[n];
+        parents[0] = -1;
         for (var i = 1; i < n; i++)
         {
-            parent[i] = i - 1;
+            parents[i] = i - 1;
         }
 
         var sw = Stopwatch.StartNew();
-        var la = _laFactory(parent);
+        var la = _laFactory(parents);
         sw.Stop();
 
         // Should still be O(n)
@@ -263,13 +264,13 @@ public class LevelAncestorTests
     }
 
     // Helper to calculate depth (for verification)
-    private static int GetDepth(int[] parent, int node)
+    private static int GetDepth(int[] parents, int node)
     {
         var depth = 0;
-        while (parent[node] != -1)
+        while (parents[node] != -1)
         {
             depth++;
-            node = parent[node];
+            node = parents[node];
         }
         return depth;
     }

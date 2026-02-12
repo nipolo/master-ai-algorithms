@@ -64,7 +64,20 @@ public class LevelAncestorTable : ILAAlgorithm
 
     public ComplexityEnum QueryComplexity => ComplexityEnum.Constant;
 
-    public void AddEdge(int parent, int child)
+    /// <summary>
+    /// Returns the ancestor of u at depth d. O(1) time.
+    /// </summary>
+    public int Query(int u, int d)
+    {
+        if (d > _depth[u] || d < 0)
+        {
+            return -1; // doesn't exist
+        }
+
+        return _table[u][d];
+    }
+
+    private void AddEdge(int parent, int child)
     {
         _children[parent].Add(child);
     }
@@ -73,13 +86,11 @@ public class LevelAncestorTable : ILAAlgorithm
     /// Preprocess the tree rooted at 'root'. O(n²) time.
     /// Builds a complete lookup table for all level ancestor queries.
     /// </summary>
-    public void Preprocess(int root)
+    private void Preprocess(int root)
     {
         // First, compute depths using BFS
         var queue = new Queue<int>();
-        var visited = new bool[_n];
         _depth[root] = 0;
-        visited[root] = true;
         queue.Enqueue(root);
 
         while (queue.Count > 0)
@@ -87,12 +98,8 @@ public class LevelAncestorTable : ILAAlgorithm
             var u = queue.Dequeue();
             foreach (var child in _children[u])
             {
-                if (!visited[child])
-                {
-                    visited[child] = true;
-                    _depth[child] = _depth[u] + 1;
-                    queue.Enqueue(child);
-                }
+                _depth[child] = _depth[u] + 1;
+                queue.Enqueue(child);
             }
         }
 
@@ -117,19 +124,6 @@ public class LevelAncestorTable : ILAAlgorithm
 
             FillTable(child);
         }
-    }
-
-    /// <summary>
-    /// Returns the ancestor of u at depth d. O(1) time.
-    /// </summary>
-    public int Query(int u, int d)
-    {
-        if (d > _depth[u] || d < 0)
-        {
-            return -1; // doesn't exist
-        }
-
-        return _table[u][d];
     }
 
     // --- Demo ---

@@ -90,23 +90,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
 
     public ComplexityEnum QueryComplexity => ComplexityEnum.Constant;
 
-    public void AddEdge(int parent, int child)
-    {
-        _children[parent].Add(child);
-        _parent[child] = parent;
-    }
-
-    public void Build(int root)
-    {
-        ComputeDepthHeightSize(root);
-        ClassifyMicroMacro(root);
-        BuildLadders();
-        IdentifyJumpNodes();
-        BuildJumpPointers();
-        FindJumpDescendants(root);
-        PreprocessMicroTrees();
-    }
-
     /// <summary> LA(node, targetDepth) in O(1) </summary>
     public int Query(int node, int targetDepth)
     {
@@ -168,6 +151,23 @@ public class LevelAncestorOptimal : ILAAlgorithm
         return ladder[position - remainingDistance];
     }
 
+    private void AddEdge(int parent, int child)
+    {
+        _children[parent].Add(child);
+        _parent[child] = parent;
+    }
+
+    private void Build(int root)
+    {
+        ComputeDepthHeightSize(root);
+        ClassifyMicroMacro(root);
+        BuildLadders();
+        IdentifyJumpNodes();
+        BuildJumpPointers();
+        FindJumpDescendants(root);
+        PreprocessMicroTrees();
+    }
+
     // Preprocessing steps
 
     private void ComputeDepthHeightSize(int root)
@@ -205,25 +205,17 @@ public class LevelAncestorOptimal : ILAAlgorithm
     {
         for (var node = 0; node < _nodeCount; node++)
         {
-            _isMicroNode[node] = _subtreeSize[node] < _microTreeMaxSize;
+            _isMicroNode[node] = _subtreeSize[node] <= _microTreeMaxSize;
         }
 
         var queue = new Queue<int>();
-        var visited = new bool[_nodeCount];
         queue.Enqueue(root);
-        visited[root] = true;
 
         while (queue.Count > 0)
         {
             var node = queue.Dequeue();
             foreach (var child in _children[node])
             {
-                if (visited[child])
-                {
-                    continue;
-                }
-
-                visited[child] = true;
                 if (_isMicroNode[child])
                 {
                     _microTreeRoot[child] = _isMicroNode[node] ? _microTreeRoot[node] : child;
@@ -238,16 +230,20 @@ public class LevelAncestorOptimal : ILAAlgorithm
     {
         // Pick tallest child as long-path continuation
         var longPathChild = new int[_nodeCount];
-        Array.Fill(longPathChild, -1);
-        for (var node = 0; node < _nodeCount; node++)
+
+        for (var v = 0; v < _nodeCount; v++)
         {
-            foreach (var child in _children[node])
+            var bestChild = -1;
+            var bestHeight = 0;
+            foreach (var child in _children[v])
             {
-                if (longPathChild[node] == -1 || _height[child] > _height[longPathChild[node]])
+                if (_height[child] > bestHeight)
                 {
-                    longPathChild[node] = child;
+                    bestHeight = _height[child];
+                    bestChild = child;
                 }
             }
+            longPathChild[v] = bestChild;
         }
 
         // Extract long paths
@@ -514,6 +510,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
                 return -1;
             }
         }
+
         return node;
     }
 
