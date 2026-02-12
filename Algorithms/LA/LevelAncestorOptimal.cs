@@ -40,7 +40,7 @@ public class LevelAncestorOptimal : ILAAlgorithm
     private readonly long[] _microTreeEncoding;
     private readonly Dictionary<long, int[,]> _microTables = [];
     private readonly Dictionary<int, int[]> _microDfsToNodeMap = [];
-    private readonly Dictionary<int, int> _microRootIds = [];
+    private readonly Dictionary<int, int> _microTreeIdByRoot = [];
 
     public LevelAncestorOptimal(int[] parent) : this(parent.Length)
     {
@@ -99,9 +99,9 @@ public class LevelAncestorOptimal : ILAAlgorithm
     public void Build(int root)
     {
         ComputeDepthHeightSize(root);
-        IdentifyJumpNodes();
         ClassifyMicroMacro(root);
         BuildLadders();
+        IdentifyJumpNodes();
         BuildJumpPointers();
         FindJumpDescendants(root);
         PreprocessMicroTrees();
@@ -131,9 +131,10 @@ public class LevelAncestorOptimal : ILAAlgorithm
                 // Answer is within the microtree — table lookup
                 var localTargetDepth = targetDepth - rootDepth;
                 var encoding = _microTreeEncoding[node];
-                var answerLocalIndex = _microTables[encoding][_microDfsIndex[node], localTargetDepth];
-                var rootId = _microRootIds[root];
-                return _microDfsToNodeMap[rootId][answerLocalIndex];
+                var answerLocalIndexInMicroTree = _microTables[encoding][_microDfsIndex[node], localTargetDepth];
+                var microTreeId = _microTreeIdByRoot[root];
+
+                return _microDfsToNodeMap[microTreeId][answerLocalIndexInMicroTree];
             }
 
             // Answer is outside — jump to microtree root's parent (a macro node)
@@ -141,11 +142,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
             if (node == -1)
             {
                 return -1;
-            }
-
-            if (_depth[node] == targetDepth)
-            {
-                return node;
             }
         }
 
@@ -201,22 +197,6 @@ public class LevelAncestorOptimal : ILAAlgorithm
                     _depth[child] = _depth[node] + 1;
                     stack.Push((child, false));
                 }
-            }
-        }
-    }
-
-    private void IdentifyJumpNodes()
-    {
-        for (var node = 0; node < _nodeCount; node++)
-        {
-            if (_subtreeSize[node] < _microTreeMaxSize)
-            {
-                continue;
-            }
-
-            if (_children[node].TrueForAll(child => _subtreeSize[child] < _microTreeMaxSize))
-            {
-                _isJumpNode[node] = true;
             }
         }
     }
@@ -302,7 +282,24 @@ public class LevelAncestorOptimal : ILAAlgorithm
             }
 
             extension.AddRange(path);
-            _ladders.Add([.. extension]);
+            _ladders.Add([.. extension]); // The same as add at index _ladders.Count
+        }
+    }
+
+    private void IdentifyJumpNodes()
+    {
+        for (var node = 0; node < _nodeCount; node++)
+        {
+            if (_isMicroNode[node])
+            {
+                continue;
+            }
+
+            // If is macrotree leaf
+            if (_children[node].TrueForAll(child => _isMicroNode[child]))
+            {
+                _isJumpNode[node] = true;
+            }
         }
     }
 
@@ -383,14 +380,14 @@ public class LevelAncestorOptimal : ILAAlgorithm
         {
             if (!_isMicroNode[node] || _microTreeRoot[node] != node)
             {
-                continue;
+                continue; // We are interested only in micro tree roots
             }
 
             var treeRoot = node;
-            _microRootIds[treeRoot] = microRootCounter;
+            _microTreeIdByRoot[treeRoot] = microRootCounter;
 
             // DFS to encode tree shape and assign local indices
-            var nodesInOrder = new List<int>();
+            var microTreeNodes = new List<int>();
             long encoding = 0;
             var bitPosition = 0;
 
@@ -415,9 +412,9 @@ public class LevelAncestorOptimal : ILAAlgorithm
                         bitPosition++; // down edge, bit = 0
                     }
 
-                    _microDfsIndex[current] = nodesInOrder.Count;
+                    _microDfsIndex[current] = microTreeNodes.Count;
                     _microLocalDepth[current] = _depth[current] - _depth[treeRoot];
-                    nodesInOrder.Add(current);
+                    microTreeNodes.Add(current);
 
                     dfsStack.Push((current, true));
                     for (var i = _children[current].Count - 1; i >= 0; i--)
@@ -431,16 +428,16 @@ public class LevelAncestorOptimal : ILAAlgorithm
                 }
             }
 
-            foreach (var treeNode in nodesInOrder)
+            foreach (var treeNode in microTreeNodes)
             {
                 _microTreeEncoding[treeNode] = encoding;
             }
 
-            _microDfsToNodeMap[microRootCounter] = [.. nodesInOrder];
+            _microDfsToNodeMap[microRootCounter] = [.. microTreeNodes];
 
             if (!_microTables.ContainsKey(encoding))
             {
-                BuildMicroTable(encoding, nodesInOrder);
+                BuildMicroTable(encoding, microTreeNodes);
             }
 
             microRootCounter++;
@@ -461,12 +458,12 @@ public class LevelAncestorOptimal : ILAAlgorithm
             localDepth[i] = _depth[nodesInOrder[i]] - _depth[nodesInOrder[0]];
             if (i > 0)
             {
-                var parentNode = _parent[nodesInOrder[i]];
                 for (var j = 0; j < i; j++)
                 {
-                    if (nodesInOrder[j] == parentNode)
+                    if (nodesInOrder[j] == _parent[nodesInOrder[i]])
                     {
                         localParent[i] = j;
+
                         break;
                     }
                 }
